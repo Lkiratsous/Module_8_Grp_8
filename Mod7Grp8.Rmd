@@ -1,14 +1,18 @@
 ---
 title: "Module 7 Group 8"
-author: "Helena Ebeling, Layne Kiratsous, Sofia Rugova "
+author: 'Helena Ebeling, Layne Kiratsous, Sofia Rugova '
 date: "2024-11-19"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
 library(rgbif)
+library(kableExtra)
 library(tidyverse)
 library(MuMIn)
+library(knitr)
 library(devtools)
 library(rnoaa)
 library(data.table)
@@ -22,53 +26,63 @@ library(dplyr)
 library(ggplot2)
 library(lubridate)
 library(parallel)
+library(data.table)
 ```
 
-```{r, Data Load}
+```{r}
 species <- c("Myiarchus crinitus","Icterus galbula","Pheucticus ludovicianus","Coccyzus americanus","Setophaga caerulescens")
-y <- paste0("2000",",","2023")
-m <- paste0("4",",","5")
+years <- 2000:2019
+months <- c(4, 5) # April and May
 
-dat.l <-list()
-
-for(s in species){
-n.obs <-  occ_data(scientificName = s,
-                   year=y,
-                   month=m,
-                   limit=0,
-                   country="US",
-                   basisOfRecord = "HUMAN_OBSERVATION",
-                   stateProvince="Massachusetts")$meta$count
-print(n.obs)
-
-dat.l[[paste0(s)]] <- occ_data(scientificName = s,
-                               year=y,
-                               month=m, limit=n.obs,
-                               country="US",
-                               basisOfRecord = "HUMAN_OBSERVATION",
-                               stateProvince="Massachusetts")[[2]]
+fetch_data_for_species_year <- function(species, year) {
+occ_data(
+scientificName = species,
+year = year,
+month = months,
+limit = 5000,
+country = "US",
+basisOfRecord = "HUMAN_OBSERVATION",
+stateProvince = "Massachusetts"
+)[[2]] # Extract the data slot
 }
 
-dat <- rbindlist(dat.l,fill=T)
-head(dat)
+#fetch data for one species across all years
+fetch_data_for_species <- function(species) {
+results <- mclapply(years, function(year) {
+fetch_data_for_species_year(species, year)
+}, mc.cores = detectCores() - 1)
 
-saveRDS(dat,"massbird.data.RDS")
+#combine results into one data.table
+dat <- rbindlist(results, fill = TRUE)
+}
+
+#data for all species, one species at a time
+dat <- rbindlist(lapply(species, fetch_data_for_species), fill = TRUE)
+
 
 ```
+
+
 
 ```{r,map}
 options(noaakey = "jggxsGpVSUlkFWePhWMDgZpUJhKVXUJE") #INPUT YOUR TOKEN!
 
 sts <- c("GHCND:USW00013894","GHCND:USW00013881","GHCND:USW00014739")
 
-
 sta.d <- bind_rows(
-  lapply(sts,function(x) ncdc_stations(stationid = x)$data ))%>%
-  mutate(usmap_transform(.,input_names = c("longitude","latitude")))%>%
-  mutate(name=str_sub(name, -5,-4))%>%
-  mutate(migr.day=c(10,5,0))%>%
-  separate(id,into = c("station.type","id")) %>%
-  cbind(sta.d %>% sf::st_as_sf()%>% sf::st_coordinates())
+  lapply(sts, function(x) ncdc_stations(stationid = x)$data)
+) %>%
+  mutate(usmap_transform(., input_names = c("longitude", "latitude"))) %>%
+  mutate(name = str_sub(name, -5, -4)) %>%
+  mutate(migr.day = c(10, 5, 0)) %>%
+  separate(id, into = c("station.type", "id"))
+
+sta.d1 <- sta.d %>%
+  sf::st_as_sf() %>%
+  sf::st_coordinates()
+
+sta.d<- cbind(sta.d, sta.d1)
+
 
 plot_usmap(include = c(.northeast_region,.south_region,.east_north_central))+geom_point(data=sta.d,aes(X,Y,col=name))
 
@@ -88,15 +102,16 @@ weather.d <- weather.d%>%
 
 
 ```{r, analyze}
-mc<- dat%>%
-  filter(species=="Myiarchus crinitus","Icterus galbula","Pheucticus ludovicianus","Coccyzus americanus","Setophaga caerulescens")%>%
-  group_by(year)%>%
-  mutate(date=as.Date(paste0(year,"-",month,"-",day)),j.day=julian(date,origin=as.Date(paste0(unique(year),"-01-01"))))%>%
-  group_by(species,year,j.day,date)%>%
-  summarise(day.tot=sum(individualCount,na.rm=T))%>%
-  group_by(species,year)%>%
-  mutate(prop=cumsum(day.tot/sum(day.tot,na.rm = T)))%>%
-  filter(year>1999)
+mc <- dat %>%
+  filter(species %in% c("Myiarchus crinitus", "Icterus galbula", "Pheucticus ludovicianus", "Coccyzus americanus", "Setophaga caerulescens")) %>%
+  group_by(year) %>%
+  mutate(date = as.Date(paste0(year, "-", month, "-", day)),
+         j.day = julian(date, origin = as.Date(paste0(unique(year), "-01-01")))) %>%
+  group_by(species, year, j.day, date) %>%
+  summarise(day.tot = sum(individualCount, na.rm = TRUE)) %>%
+  group_by(species, year) %>%
+  mutate(prop = cumsum(day.tot / sum(day.tot, na.rm = TRUE))) %>%
+  filter(year > 1999)
 
 
 mc.pred <- mc%>%
@@ -140,9 +155,11 @@ Anova(mc.lmer2)
 mc.arr.aic <- dredge(mc.lmer2,fixed = c("wk.tmin","wk.tmax","wk.wvec"),)
 
 mc.kb <- kable(mc.arr.aic[1:4,],caption = "Fit values for nested models of the most complicated lme model")
+
 kable_styling(mc.kb)
 
 best.lmer <-  lmer(j.day~wk.tmin+wk.tmax+wk.wvec+(1|name),mc.arr.weath2,na.action = "na.fail")
+
 Anova(best.lmer)
 ```
 
