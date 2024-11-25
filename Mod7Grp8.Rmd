@@ -5,6 +5,7 @@ date: "2024-11-19"
 output:
   html_document: default
   pdf_document: default
+bibliography: BIOL3140.bib
 ---
 
 ## Introduction
