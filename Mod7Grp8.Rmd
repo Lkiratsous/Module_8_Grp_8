@@ -7,6 +7,16 @@ output:
   pdf_document: default
 ---
 
+## Introduction
+
+The purpose of this project is to observe the relationship between local weather conditions and arrival time of trans-Gulf migrants (TGMs) in Massachusetts. Trans-Gulf migrants are species of birds that migrate a long distance from Central and South America to the temperate North America. We began this project by reading previously published work on the migration patterns of TGMs by @smith, who showed through their research that earlier arrival time increases the probability of migrants finding mates and breeding more than one time but, arriving later increases the changes of there being sufficient food at their final destination. With the rise of climate change and the failure of TGMs to shift their arrival time with the changing climate, scientists worry about possible population decline. Our study aims to shed light on this topic to determine if the TGMs are changing their migration patterns in light of climate change. We used eBird data, a site where birders can submit their observations of bird sightings, to determine the arrival time of 5 TMG species. Additionally we used data collected through NOAA's National Climatic Data Center to determine the local weather conditions at the time of arrival. 
+In sum, we hope to answer three questions through our project: If TMG arrival time in MA changes based on temperature and wind patterns along the migration route? Assuming that arrival time varies with weather changes, will climate play a role in population status of TMGs arriving in MA during the spring? Finally, we will explain why our analysis matters and how it builds off previous work in the field on the impact of climate on long distance migration passerine birds.  
+
+## Methods
+
+First we began our analysis by downloading the occurrence data in MA each spring for 5 species: *Myiarchus crinitus*,*Icterus galbula*,*Pheucticus ludovicianus*,*Coccyzus americanus*, and *Setophaga caerulescens*. Next we compiled the weather data along the migration route of TGMs (1000 km away from MA 5 days before the arrival and 2000 km away from MA 10 days before the arrival) including data from Mobile, AL and Charlotte, NC which represents the most direct flight path for TGMs traveling to Boston, MA. We plotted these locations on a map to provide a visual key of the migration. We then created a logistic model to predict the arrival time for each year for each species. Next, we simplified and combined our weather data with our occurrence data from eBird accounting for temperature and wind weather values. Then we performed a linear mixed-effect model of arrival day as it varies with both weather variables for both weather data sets (single-day and two-week weather averages). Finally we model-tested both data sets using dredge() and performed an Anova to test the best-fit models from both data sets.
+
+## Results
 ```{r setup, include=FALSE}
 library(rgbif)
 library(kableExtra)
@@ -162,4 +172,17 @@ best.lmer <-  lmer(j.day~wk.tmin+wk.tmax+wk.wvec+(1|name),mc.arr.weath2,na.actio
 
 Anova(best.lmer)
 ```
+
+A significant interaction between weekly temperatures and wind speed was found in the final model. Based on AIC values, the most complex model (with all weather predictors) best-explained migration timing. Arrival dates were significantly impacted by the weekly minimum temperature, maximum temperature, and wind speed in the best linear mixed-effects model.
+
+## Discussion
+
+TGMs' arrival times in Massachusetts vary with meteorological conditions along their migration routes. The best LME model shows that temperature and wind significantly influence migration timing, with higher temperatures correlating to earlier arrivals and strong winds delaying migration. Long-term studies suggest a 1°C increase in spring temperatures advances migration timing by about one day @marra2005influence. According to our analysis, wind variables also play a crucial role, suggesting that temperature alone cannot explain the phenomenon. Several factors, including migration cohort sizes, climate, etc @miller2008bird, have led to a delay in the earliest arrival dates of passerines, even though their mean arrival dates have advanced. The results indicate that migration timing is influenced by a wide variety of factors, including those not tested in our study.
+These results refine our understanding of passerine migration. While migration timing may be flexible, birds may not fully adapt to climate-induced shifts in phenology. For example, lilac budburst advances three times faster than bird arrival dates with each 1°C increase in temperature @marra2005influence. This suggests that birds may not be capable of fully responding to climate change. As climate change continues, species may be forced to migrate to new habitats or adapt their behavior to remain viable. 
+
+## Author's Contributions
+
+Helena- 
+Layne- wrote the introduction and methods sections
+Sofia- wrote discussion and results narrative
 
