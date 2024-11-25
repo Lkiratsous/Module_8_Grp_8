@@ -183,7 +183,7 @@ These results refine our understanding of passerine migration. While migration t
 
 ## Author's Contributions
 
-Helena- 
+Helena- wrote the code and produced the figures
 Layne- wrote the introduction and methods sections
 Sofia- wrote discussion and results narrative
 
